@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Lung Cancer Prediction</title>
+    <style>
+      #camera-preview {
+        width: 320px;
+        height: 240px;
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Lung Cancer Prediction</h1>
+    <video id="camera-preview" autoplay></video>
+    <button id="capture-btn">Capture</button>
+    <canvas id="captured-image" style="display: none;"></canvas>
+    <form id="upload-form" enctype="multipart/form-data" style="display: none;">
+      <input type="file" name="image" accept="image/*" required>
+      <button type="submit">Predict</button>
+    </form>
+    <div id="prediction-result"></div>
+
+    <script>
+      const cameraPreview = document.getElementById('camera-preview');
+      const captureBtn = document.getElementById('capture-btn');
+      const capturedImage = document.getElementById('captured-image');
+      const form = document.getElementById('upload-form');
+      const predictionResult = document.getElementById('prediction-result');
+
+      let streamStarted = false;
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          cameraPreview.srcObject = stream;
+          streamStarted = true;
+        })
+        .catch(error => {
+          console.error('Error accessing camera:', error);
+        });
+
+      captureBtn.addEventListener('click', () => {
+        const context = capturedImage.getContext('2d');
+        context.drawImage(cameraPreview, 0, 0, capturedImage.width, capturedImage.height);
+        capturedImage.style.display = 'block';
+        form.style.display = 'block';
+        const fileInput = form.querySelector('input[type="file"]');
+        fileInput.files = [capturedImage.toDataURL('image/jpeg')];
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const response = await fetch('http://127.0.0.1:5000/predict', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          predictionResult.textContent = `Prediction: ${data.prediction}`;
+        } else {
+          predictionResult.textContent = 'An error occurred during prediction.';
+        }
+      });
+    </script>
+  </body>
+</html>
